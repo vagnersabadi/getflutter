@@ -4,7 +4,7 @@ import 'package:getflutter/getflutter.dart';
 class GFAccordion extends StatefulWidget {
   const GFAccordion(
       {Key key,
-      this.child,
+      this.titleChild,
       this.content,
       this.collapsedTitlebackgroundColor = GFColors.WHITE,
       this.expandedTitlebackgroundColor = const Color(0xFFE0E0E0),
@@ -18,11 +18,18 @@ class GFAccordion extends StatefulWidget {
       this.contentChild,
       this.titleborder = const Border(),
       this.contentBorder = const Border(),
-      this.margin})
+      this.margin,
+      this.showAccordion = false,
+      this.onToggleCollapsed})
       : super(key: key);
 
-  /// child of  type [Widget]is alternative to title key. title will get priority over child
-  final Widget child;
+  final Function(bool) onToggleCollapsed;
+
+  /// controls if the accordion should be collapsed or not making it possible to be controlled from outside
+  final bool showAccordion;
+
+  /// child of  type [Widget]is alternative to title key. title will get priority over titleChild
+  final Widget titleChild;
 
   /// content of type[String] which shows the messages after the [GFAccordion] is expanded
   final String content;
@@ -42,7 +49,7 @@ class GFAccordion extends StatefulWidget {
   ///expandedIcon of type[Widget] which is used when the [GFAccordion] is expanded
   final Widget expandedIcon;
 
-  /// text of type [String] is alternative to child. text will get priority over child
+  /// text of type [String] is alternative to child. text will get priority over titleChild
   final String title;
 
   /// textStyle of type [textStyle] will be applicable to text only and not for the child
@@ -75,10 +82,11 @@ class _GFAccordionState extends State<GFAccordion>
   AnimationController animationController;
   AnimationController controller;
   Animation<Offset> offset;
-  bool showAccordion = false;
+  bool showAccordion;
 
   @override
   void initState() {
+    showAccordion = widget.showAccordion;
     animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -102,6 +110,7 @@ class _GFAccordionState extends State<GFAccordion>
   @override
   void dispose() {
     animationController.dispose();
+    controller.dispose();
     super.dispose();
   }
 
@@ -111,21 +120,8 @@ class _GFAccordionState extends State<GFAccordion>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  switch (controller.status) {
-                    case AnimationStatus.completed:
-                      controller.forward(from: 0);
-                      break;
-                    case AnimationStatus.dismissed:
-                      controller.forward();
-                      break;
-                    default:
-                  }
-                  showAccordion = !showAccordion;
-                });
-              },
+            InkWell(
+              onTap: _toggleCollapsed,
               child: Container(
                 decoration: BoxDecoration(
                   border: widget.titleborder,
@@ -140,7 +136,7 @@ class _GFAccordionState extends State<GFAccordion>
                     Expanded(
                       child: widget.title != null
                           ? Text(widget.title, style: widget.textStyle)
-                          : (widget.child ?? Container()),
+                          : (widget.titleChild ?? Container()),
                     ),
                     showAccordion ? widget.expandedIcon : widget.collapsedIcon
                   ],
@@ -165,4 +161,22 @@ class _GFAccordionState extends State<GFAccordion>
           ],
         ),
       );
+
+  void _toggleCollapsed() {
+    setState(() {
+      switch (controller.status) {
+        case AnimationStatus.completed:
+          controller.forward(from: 0);
+          break;
+        case AnimationStatus.dismissed:
+          controller.forward();
+          break;
+        default:
+      }
+      showAccordion = !showAccordion;
+      if (widget.onToggleCollapsed != null) {
+        widget.onToggleCollapsed(showAccordion);
+      }
+    });
+  }
 }
